@@ -18,6 +18,7 @@ const REALTIME_TABLES = [
   'photo_wall',
   'link_drops',
   'flip_letters',
+  'date_diary',
 ];
 
 const coupleSyncChannels = new Map();
@@ -646,7 +647,6 @@ export const networkUtility = {
     };
   },
   
-  // 1. FETCH DIARY DATES (Strictly keeping photo_wall completely decoupled)
   async getDiaryDates(coupleId) {
     const { data, error } = await supabase
       .from('date_diary')
@@ -656,40 +656,92 @@ export const networkUtility = {
           id,
           user_id,
           notes,
-          rating
+          rating,
+          created_at
+        ),
+        date_diary_photos (
+          id,
+          photo_id,
+          photo_wall (
+            id,
+            storage_path,
+            caption,
+            uploaded_by,
+            created_at
+          )
         )
       `)
       .eq('couple_id', coupleId)
       .order('scheduled_date', { ascending: false });
 
-    if (error) throw error;
-    
-    return (data || []).map(date => ({
-      ...date,
-      notes: date.date_diary_notes || []
-    }));
+    if (error) {
+      console.error('Error fetching diary dates:', error.message);
+      throw error;
+    }
+
+    const rows = data || [];
+    const enriched = await Promise.all(
+      rows.map(async (date) => {
+        const photos = await Promise.all(
+          (date.date_diary_photos || []).map(async (link) => {
+            const wall = link.photo_wall;
+            if (!wall) return null;
+            const imageUrl = await this.getPhotoSignedUrl(wall.storage_path);
+            if (!imageUrl) return null;
+            return { ...link, photo_wall: { ...wall, imageUrl } };
+          })
+        );
+        return {
+          ...date,
+          notes: (date.date_diary_notes || []).sort(
+            (a, b) => new Date(a.created_at) - new Date(b.created_at)
+          ),
+          photos: photos.filter(Boolean),
+        };
+      })
+    );
+
+    return enriched;
   },
 
-  // 2. CREATE A NEW ADVENTURE DIARY ENTRY
   async createDiaryDate(coupleId, payload) {
     const { data, error } = await supabase
       .from('date_diary')
-      .insert([{
+      .insert({
         couple_id: coupleId,
-        title: payload.title,
+        title: payload.title.trim(),
         scheduled_date: payload.scheduled_date,
-        location: payload.location || null,
-        is_completed: false
-      }])
+        location: payload.location?.trim() || null,
+        is_completed: false,
+      })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating diary date:', error.message);
+      throw error;
+    }
+    broadcastDataRefresh(coupleId, 'date_diary');
     return data;
   },
 
-  // 3. TOGGLE THE STATUS TO COMPLETED OR PLANNED
-  async toggleDateCompletion(dateId, isCompleted) {
+  async updateDiaryDate(dateId, coupleId, updates) {
+    const { data, error } = await supabase
+      .from('date_diary')
+      .update(updates)
+      .eq('id', dateId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating diary date:', error.message);
+      throw error;
+    }
+    if (coupleId) broadcastDataRefresh(coupleId, 'date_diary');
+    return data;
+  },
+
+  async toggleDateCompletion(dateId, isCompleted, coupleId) {
     const { data, error } = await supabase
       .from('date_diary')
       .update({ is_completed: isCompleted })
@@ -697,24 +749,124 @@ export const networkUtility = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error toggling date completion:', error.message);
+      throw error;
+    }
+    if (coupleId) broadcastDataRefresh(coupleId, 'date_diary');
     return data;
   },
 
-  // 4. ADD OR UPDATE A USER'S MEMORY REFLECTION NOTE
-  async saveDiaryNote(dateId, userId, notes, rating) {
+  async deleteDiaryDate(dateId, coupleId) {
+    const { error } = await supabase.from('date_diary').delete().eq('id', dateId);
+    if (error) {
+      console.error('Error deleting diary date:', error.message);
+      throw error;
+    }
+    if (coupleId) broadcastDataRefresh(coupleId, 'date_diary');
+  },
+
+  async saveDiaryNote(dateId, userId, notes, rating = null) {
     const { data, error } = await supabase
       .from('date_diary_notes')
-      .upsert([{
-        date_diary_id: dateId,
-        user_id: userId,
-        notes: notes,
-        rating: rating || null
-      }], { onConflict: 'date_diary_id,user_id' })
+      .upsert(
+        {
+          date_diary_id: dateId,
+          user_id: userId,
+          notes: notes.trim(),
+          rating: rating || null,
+        },
+        { onConflict: 'date_diary_id,user_id' }
+      )
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error saving diary note:', error.message);
+      throw error;
+    }
     return data;
+  },
+
+  /** Appends a new reflection (schema allows one row per user — we thread with timestamps). */
+  async appendDiaryNote(dateId, userId, newNote, rating = null, coupleId) {
+    const { data: existing } = await supabase
+      .from('date_diary_notes')
+      .select('notes, rating')
+      .eq('date_diary_id', dateId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const stamp = new Date().toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    const combined = existing?.notes
+      ? `${existing.notes}\n\n— ${stamp}\n${newNote.trim()}`
+      : newNote.trim();
+
+    const data = await this.saveDiaryNote(
+      dateId,
+      userId,
+      combined,
+      rating ?? existing?.rating ?? null
+    );
+    if (coupleId) broadcastDataRefresh(coupleId, 'date_diary');
+    return data;
+  },
+
+  async linkPhotoToDiaryDate(dateDiaryId, photoId, coupleId) {
+    const { error } = await supabase
+      .from('date_diary_photos')
+      .insert({ date_diary_id: dateDiaryId, photo_id: photoId });
+
+    if (error) {
+      console.error('Error linking photo to date:', error.message);
+      throw error;
+    }
+    if (coupleId) {
+      broadcastDataRefresh(coupleId, 'date_diary');
+      broadcastDataRefresh(coupleId, 'photo_wall');
+    }
+  },
+
+  async uploadPhotoToDiaryDate(coupleId, userId, dateDiaryId, file, caption = '') {
+    const inserted = await this.uploadPhotoToWall(coupleId, userId, file, caption);
+    const photoRow = Array.isArray(inserted) ? inserted[0] : inserted;
+    if (!photoRow?.id) throw new Error('Photo upload did not return an id');
+    await this.linkPhotoToDiaryDate(dateDiaryId, photoRow.id, coupleId);
+    return photoRow;
+  },
+
+  /** Map photo_wall id → date label for polaroid pins on the wall. */
+  async getPhotoDateTags(coupleId) {
+    const { data, error } = await supabase
+      .from('date_diary')
+      .select(
+        `
+        title,
+        scheduled_date,
+        date_diary_photos ( photo_id )
+      `
+      )
+      .eq('couple_id', coupleId);
+
+    if (error) {
+      console.error('Error fetching photo date tags:', error.message);
+      return {};
+    }
+
+    const map = {};
+    for (const diary of data || []) {
+      for (const link of diary.date_diary_photos || []) {
+        map[link.photo_id] = {
+          title: diary.title,
+          scheduled_date: diary.scheduled_date,
+        };
+      }
+    }
+    return map;
   },
 };

@@ -54,7 +54,7 @@ export function FlipLetter() {
   };
 
   return (
-    <div className="w-full flex items-center justify-center overflow-visible select-none">
+    <div className="h-full w-full flex items-start justify-center overflow-visible select-none">
       {/* Premium scrollbar styling with a completely transparent track */}
       <style dangerouslySetInnerHTML={{__html: `
         .vibe-minimal-scroll::-webkit-scrollbar {
@@ -78,7 +78,10 @@ export function FlipLetter() {
         }
       `}} />
 
-      <div style={{ perspective: '1200px' }} className="w-80 h-[26rem] relative overflow-visible">
+      <div
+        style={{ perspective: '1200px' }}
+        className="h-full max-h-[min(26rem,calc(100dvh-10rem))] w-auto aspect-[320/416] max-w-[clamp(14rem,18vw,20rem)] relative overflow-visible shrink-0"
+      >
         <div
           onClick={handleCardClick}
           className="absolute inset-0 transition-transform duration-700 ease-out preserve-3d cursor-pointer"
@@ -151,7 +154,7 @@ export function FlipLetter() {
                   />
                 ) : (
                   <div className="w-full flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto pr-2 text-xs font-sans font-medium text-vibe-text/90 whitespace-pre-wrap leading-relaxed max-h-[16rem] vibe-minimal-scroll">
+                    <div className="flex-1 overflow-y-auto pr-2 text-xs font-sans font-medium text-vibe-text/90 whitespace-pre-wrap leading-relaxed min-h-0 vibe-minimal-scroll">
                       {mine.trim() ? mine : (
                         <span className="italic text-vibe-text/30 tracking-wide block pt-4 text-center">
                           Tell them something...
@@ -198,7 +201,7 @@ export function FlipLetter() {
 
               {/* Core Body Container Area */}
               <div className="flex-1 w-full flex flex-col justify-between mt-2 overflow-hidden">
-                <div className="flex-1 overflow-y-auto pr-2 text-xs font-sans font-medium text-white/90 whitespace-pre-wrap leading-relaxed max-h-[16rem] vibe-minimal-scroll">
+                <div className="flex-1 overflow-y-auto pr-2 text-xs font-sans font-medium text-white/90 whitespace-pre-wrap leading-relaxed min-h-0 vibe-minimal-scroll">
                   {theirs.trim() ? theirs : (
                     <div className="h-full flex flex-col items-center justify-center text-center px-4 py-8">
                       <span className="italic text-white/40 tracking-wide text-xs block">

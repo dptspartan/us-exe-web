@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter } from "react-router-dom";
 import { AppProvider } from './context/AuthContext';
 import { MoodProvider } from './context/MoodContext';
 import { ProtectedRoute } from './context/ProtectedRoute';
@@ -11,7 +12,7 @@ function App() {
     // Provider sits at the very top so hooks inside the router can access it safely
     <AppProvider>
       <MoodProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           {/* Public Login Screen */}
           <Route path="/login" element={<Login />} />
@@ -29,7 +30,7 @@ function App() {
           {/* Global Fallback Safeguard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
       </MoodProvider>
     </AppProvider>
 

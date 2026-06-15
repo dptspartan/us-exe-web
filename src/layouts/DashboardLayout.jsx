@@ -50,30 +50,35 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div
-      className="min-h-screen text-vibe-text font-mono transition-[background] duration-1000 flex flex-col"
+      className="h-dvh max-h-dvh overflow-hidden text-vibe-text font-mono transition-[background] duration-1000 flex flex-col"
       style={{ background: 'var(--vibe-gradient)', backgroundAttachment: 'fixed' }}
     >
       {/* ================= EDITORIAL MASTHEAD HEADER ================= */}
-      <header className="w-full sticky top-0 z-50 backdrop-blur-md border-b-4 border-double border-vibe-text/20 bg-transparent pt-8 pb-5 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:grid md:grid-cols-3 items-center justify-between gap-4">
-          
-          {/* Left Spacer (Balances layout grid structure perfectly) */}
+      <header className="w-full shrink-0 z-50 backdrop-blur-md border-b-4 border-double border-vibe-text/20 bg-transparent pt-4 pb-3 md:pt-6 md:pb-4 px-4">
+
+        <div className="max-w-6xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+
+          {/* Left Spacer */}
           <div className="hidden md:block" />
 
-          {/* Center Title: The Core Masthead */}
+          {/* Center Title */}
           <div className="text-center min-w-0 flex flex-col items-center">
-            <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase border-b border-vibe-text/10 pb-2 px-6 max-w-full truncate">
+
+            <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase border-b border-vibe-text/10 pb-2 px-6 whitespace-normal break-words text-center leading-snug max-w-full">
               {myName}
               <span className="text-vibe-text/30 font-light italic mx-3 lowercase">&amp;</span>
               {partnerName}
             </h1>
+
             <p className="text-[10px] md:text-[11px] uppercase tracking-[0.25em] text-vibe-text/60 mt-2.5 font-bold transition-all duration-500">
               {moodPairLabel(myMood, partnerMood)}
             </p>
+
           </div>
 
-          {/* Right Action Block: Sign Out */}
-          <div className="w-full md:w-auto flex justify-center md:justify-end items-center mt-2 md:mt-0">
+          {/* Right Action Block */}
+          <div className="w-full flex justify-center md:justify-end items-center mt-2 md:mt-0">
+
             <button
               type="button"
               onClick={handleSignOut}
@@ -83,12 +88,14 @@ export default function DashboardLayout({ children }) {
               <FiPower className="text-xs group-hover:rotate-45 transition-transform duration-300" />
               <span>Bye Bye</span>
             </button>
+
           </div>
+
         </div>
       </header>
 
       {/* ================= MAIN CONTENT INJECTOR ================= */}
-      <main className="flex-1 w-full h-screen overflow-y-hidden max-h-[80vh] max-w-[98vw] mx-auto px-4 py-8 pb-32 md:pb-16">
+      <main className="flex-1 min-h-0 w-full max-w-[98vw] mx-auto px-3 md:px-4 py-2 md:py-3 pb-28 md:pb-24 overflow-hidden">
         {children}
       </main>
 
@@ -130,7 +137,7 @@ export default function DashboardLayout({ children }) {
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        className="fixed bottom-0 right-0 md:bottom-0 bg-vibe-accent/25 backdrop-blur-md pt-12 pl-12 z-[60] pointer-events-auto border-t border-l border-white/10 shadow-[-10px_-10px_30px_rgba(0,0,0,0.15)] transition-colors duration-1000"
+        className="fixed bottom-0 right-0 bg-vibe-accent/25 backdrop-blur-md pt-8 pl-8 lg:pt-10 lg:pl-10 xl:pt-12 xl:pl-12 z-[60] pointer-events-auto border-t border-l border-white/10 shadow-[-10px_-10px_30px_rgba(0,0,0,0.15)] transition-colors duration-1000"
       >
         {/* Completely controlled component instance decoupled from local databases */}
         <MoodPicker />

@@ -242,10 +242,10 @@ export function JamSessions() {
   const activeTypeConfig = JAM_SESSION_TYPES.find((t) => t.id === activeTab);
 
   return (
-    <div className="w-full rounded-2xl flex flex-col justify-between shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden relative select-none bg-[#121214] p-6">
+    <div className="w-full h-full max-h-full rounded-2xl flex flex-col justify-between shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden relative select-none bg-[#121214] p-4 lg:p-6">
       
       {/* Rig Control Panel Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-4 mb-5 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/5 pb-2 mb-2 lg:pb-4 lg:mb-4 gap-2 lg:gap-4 shrink-0">
         <div>
           <h3 className="text-sm font-sans font-black text-neutral-200 tracking-wider uppercase flex items-center gap-2">
             The Jam Deck <span className="text-xs text-vibe-accent animate-pulse">📡</span>
@@ -286,7 +286,7 @@ export function JamSessions() {
       </div>
 
       {/* Main Structural Tab Blade Shell Area */}
-      <div className="relative min-h-[106px] flex flex-col justify-center">
+      <div className="relative min-h-0 flex-1 flex flex-col justify-center overflow-hidden">
         {activeTypeConfig && (
           <SessionSlot
             key={activeTypeConfig.id}

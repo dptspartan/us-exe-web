@@ -24,11 +24,20 @@
   --vibe-mood-b: #94a3b8;
 }
 
+html {
+  height: 100%;
+}
+
 body {
   background: var(--vibe-gradient);
   background-attachment: fixed;
   color: var(--vibe-text);
-  min-height: 100vh;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100%;
 }
 
 /* Polaroid stack */

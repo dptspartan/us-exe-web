@@ -120,93 +120,101 @@ export function StickyNotesTray() {
 /* ============================================================================
    2. STICKY NOTE COMPOSER (SENDING ENGINE & PARCHMENT LAYOUT)
    ============================================================================ */
+
+const NOTE_STACK_LAYERS = [
+  {
+    rotate: -5.5,
+    x: -8,
+    y: 10,
+    opacity: 0.32,
+    gradient: 'linear-gradient(135deg, #18181a 0%, #101012 100%)',
+  },
+  {
+    rotate: 4,
+    x: 7,
+    y: 6,
+    opacity: 0.5,
+    gradient: 'linear-gradient(135deg, #1c1c20 0%, #121214 100%)',
+  },
+  {
+    rotate: -2,
+    x: -3,
+    y: 3,
+    opacity: 0.72,
+    gradient: 'linear-gradient(135deg, #202024 0%, #151518 100%)',
+  },
+];
+
+const NOTE_CARD_SHADOW =
+  '0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.1)';
+
+function NoteCardShell({ children, className = '', style = {} }) {
+  return (
+    <div
+      className={`absolute inset-0 rounded-2xl border border-white/10 overflow-hidden flex flex-col ${className}`}
+      style={{
+        background: 'linear-gradient(135deg, #222227 0%, #161619 100%)',
+        boxShadow: NOTE_CARD_SHADOW,
+        ...style,
+      }}
+    >
+      {children}
+      <div className="absolute bottom-0 right-0 w-8 h-8 pointer-events-none bg-gradient-to-br from-transparent via-black/20 to-black/50 rounded-br-2xl border-r border-b border-white/5" />
+    </div>
+  );
+}
+
 export function StickyNoteComposer() {
   const { user, coupleId } = useApp();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
-  const [flingState, setFlingState] = useState('idle'); // 'idle' | 'flinging'
+  const [flyingNote, setFlyingNote] = useState(null);
 
   const send = async (e) => {
     e.preventDefault();
     const trimmed = content.trim();
-    if (!trimmed || !coupleId || !user?.id || sending || flingState === 'flinging') return;
-    
+    if (!trimmed || !coupleId || !user?.id || sending || flyingNote) return;
+
     setSending(true);
     try {
       const res = await networkUtility.sendStickyNote(coupleId, user.id, trimmed);
-      
       if (res || res?.status === 201) {
-        setFlingState('flinging');
-        
-        setTimeout(() => {
-          setContent('');
-          setFlingState('idle');
-        }, 850);
+        setFlyingNote({ text: trimmed, id: Date.now() });
+        setContent('');
       }
     } catch (err) {
-      console.error("Failed to send note:", err);
+      console.error('Failed to send note:', err);
     } finally {
       setSending(false);
     }
   };
 
-  const cardVariants = {
-    idle: { 
-      opacity: 1, 
-      scale: 1, 
-      x: 0, 
-      y: 0, 
-      rotate: 0, 
-      skewY: 0,
-      filter: 'blur(0px)'
-    },
-    flinging: { 
-      opacity: 0,
-      x: 450,        
-      y: -100,       
-      scale: 0.4,    
-      rotate: 30,    
-      skewY: -20,    
-      filter: 'blur(2px)',
-      transition: {
-        type: 'spring',
-        stiffness: 90,
-        damping: 14,
-        mass: 0.8
-      }
-    }
-  };
-
   return (
-    <div className="w-full max-w-xs mx-auto select-none relative">
-      
-      {/* Underlying Visual Pile Deck Layer 2 */}
-      <div 
-        className="absolute inset-x-3 bottom-4 top-8 rounded-2xl rotate-2 translate-y-2 border border-white/5 shadow-md z-0"
-        style={{ background: 'linear-gradient(135deg, #1a1a1c 0%, #111112 100%)', opacity: 0.4 }}
-      />
-      
-      {/* Underlying Visual Pile Deck Layer 1 */}
-      <div 
-        className="absolute inset-x-1.5 bottom-5 top-7 rounded-2xl -rotate-1 translate-y-1 border border-white/5 shadow-lg z-10"
-        style={{ background: 'linear-gradient(135deg, #1e1e22 0%, #131315 100%)', opacity: 0.7 }}
-      />
+    <div className="relative w-[clamp(11rem,14vw,18rem)] shrink-0 self-start select-none pb-1">
+      {/* Stage sized to card; stack can peek below without stretching */}
+      <div className="relative w-full aspect-square">
 
-      {/* Main Structural Form Interactivity Node */}
-      <motion.div
-        variants={cardVariants}
-        animate={flingState}
-        initial="idle"
-        className="relative w-full aspect-square rounded-2xl p-6 flex flex-col justify-between border border-white/10 z-20"
-        style={{
-          background: 'linear-gradient(135deg, #222227 0%, #161619 100%)',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.1)'
-        }}
-      >
-        <form onSubmit={send} className="h-full flex flex-col justify-between w-full pointer-events-auto">
-          
-          <div className="flex flex-col w-full">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+        {/* Decorative stack peeking from behind (bottom-anchored + rotated) */}
+        {NOTE_STACK_LAYERS.map((layer, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 rounded-2xl border border-white/5 shadow-md origin-bottom"
+            style={{
+              zIndex: i + 1,
+              opacity: layer.opacity,
+              background: layer.gradient,
+              transform: `translate(${layer.x}px, ${layer.y}px) rotate(${layer.rotate}deg)`,
+            }}
+          />
+        ))}
+
+        {/* Active composer — stays put; footer + Pin Note live inside the card */}
+        <NoteCardShell className="z-20 origin-bottom" style={{ transform: 'rotate(0.75deg)' }}>
+          <form
+            onSubmit={send}
+            className="relative z-10 flex flex-col h-full min-h-0 p-5 pointer-events-auto"
+          >
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-2 shrink-0">
               <span className="text-[10px] uppercase font-black tracking-[0.2em] text-neutral-400">
                 📝 Write Sticky Note
               </span>
@@ -216,36 +224,71 @@ export function StickyNoteComposer() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              disabled={sending || flingState === 'flinging'}
-              rows={4}
+              disabled={sending || !!flyingNote}
               placeholder="Type something sweet, urgent, or silly for them..."
-              className="w-full bg-transparent text-neutral-200 placeholder-neutral-600 text-xs font-sans font-semibold resize-none focus:outline-none leading-relaxed h-[10rem] pr-1 scrollbar-thin"
+              className="flex-1 min-h-0 w-full bg-transparent text-neutral-200 placeholder-neutral-600 text-xs font-sans font-semibold resize-none focus:outline-none leading-relaxed py-1 pr-1 scrollbar-thin"
             />
-          </div>
 
-          <div className="pt-2 border-t border-white/5 w-full flex items-center justify-between">
-            <span className="text-[9px] font-mono font-bold text-neutral-600 uppercase tracking-wider">
-              {content.trim().length} chars
-            </span>
-            
-            <button
-              type="submit"
-              disabled={sending || !content.trim() || flingState === 'flinging'}
-              className={`px-4 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all active:scale-95 shadow-md ${
-                !content.trim() || flingState === 'flinging'
-                  ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed shadow-none'
-                  : 'bg-vibe-accent text-black font-extrabold hover:brightness-110 shadow-[0_0_15px_rgba(var(--vibe-accent-rgb),0.25)]'
-              }`}
-            >
-              {sending ? 'Sending...' : 'Pin Note'}
-            </button>
-          </div>
-        </form>
+            <div className="shrink-0 pt-2 mt-2 border-t border-white/5 flex items-center justify-between gap-2">
+              <span className="text-[9px] font-mono font-bold text-neutral-600 uppercase tracking-wider">
+                {content.trim().length} chars
+              </span>
+              <button
+                type="submit"
+                disabled={sending || !content.trim() || !!flyingNote}
+                className={`px-4 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all active:scale-95 shadow-md shrink-0 ${
+                  !content.trim() || flyingNote
+                    ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed shadow-none'
+                    : 'bg-vibe-accent text-black font-extrabold hover:brightness-110 shadow-[0_0_15px_rgba(var(--vibe-accent-rgb),0.25)]'
+                }`}
+              >
+                {sending ? 'Sending...' : 'Pin Note'}
+              </button>
+            </div>
+          </form>
+        </NoteCardShell>
 
-        {/* Bottom-Right Curled Aesthetic Page Overlay Accent */}
-        <div className="absolute bottom-0 right-0 w-8 h-8 pointer-events-none bg-gradient-to-br from-transparent via-black/20 to-black/50 rounded-br-2xl border-r border-b border-white/5" />
-      </motion.div>
-
+        {/* Fly-away layer — clipped here only so the page never scrolls or shifts */}
+        <div className="absolute inset-0 z-40 overflow-hidden pointer-events-none">
+          <AnimatePresence>
+            {flyingNote && (
+              <motion.div
+                key={flyingNote.id}
+                className="absolute inset-0 origin-bottom"
+                initial={{ x: 0, y: 0, rotate: 0.75, opacity: 1, scale: 1 }}
+                animate={{
+                  x: '108%',
+                  y: '-48%',
+                  rotate: 20,
+                  opacity: 0,
+                  scale: 0.78,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+                onAnimationComplete={() => setFlyingNote(null)}
+              >
+                <NoteCardShell>
+                  <div className="flex flex-col h-full min-h-0 p-5">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-2 shrink-0">
+                      <span className="text-[10px] uppercase font-black tracking-[0.2em] text-neutral-400">
+                        📝 Write Sticky Note
+                      </span>
+                    </div>
+                    <p className="flex-1 min-h-0 text-xs font-sans font-semibold text-neutral-200 leading-relaxed overflow-hidden">
+                      {flyingNote.text}
+                    </p>
+                    <div className="shrink-0 pt-2 mt-2 border-t border-white/5 flex justify-end">
+                      <span className="px-4 py-1.5 rounded-xl text-[10px] uppercase font-black tracking-widest bg-vibe-accent text-black">
+                        Pin Note
+                      </span>
+                    </div>
+                  </div>
+                </NoteCardShell>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 }

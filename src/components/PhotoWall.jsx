@@ -3,6 +3,33 @@ import { networkUtility } from '../api/NetworkUtils';
 import { useApp } from '../hooks/useApp';
 import { useCoupleRealtime } from '../hooks/useCoupleRealtime';
 
+function formatDatePill(isoDate) {
+  if (!isoDate) return '';
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function DateLinkTag({ dateLink }) {
+  if (!dateLink?.scheduled_date) return null;
+
+  return (
+    <div
+      className="absolute top-1.5 left-1.5 z-20 flex items-center gap-1 pl-1 pr-2 py-0.5 rounded-full bg-neutral-950/92 border border-vibe-accent/50 shadow-[0_2px_8px_rgba(0,0,0,0.45)] pointer-events-none"
+      title={dateLink.title ? `${dateLink.title} · ${formatDatePill(dateLink.scheduled_date)}` : formatDatePill(dateLink.scheduled_date)}
+    >
+      <span className="text-[9px] leading-none text-vibe-accent" aria-hidden>
+        📌
+      </span>
+      <span className="text-[8px] font-mono font-bold uppercase tracking-wide text-white leading-tight whitespace-nowrap">
+        {formatDatePill(dateLink.scheduled_date)}
+      </span>
+    </div>
+  );
+}
+
 function stackTransform(index, total, activeIndex, cycling) {
   const rel = (index - activeIndex + total) % total;
   // Subtle structural rotations simulating a messy, organic desktop pile
@@ -26,6 +53,7 @@ function stackTransform(index, total, activeIndex, cycling) {
 export function PhotoWall() {
   const { user, coupleId } = useApp();
   const [photos, setPhotos] = useState([]);
+  const [dateTags, setDateTags] = useState({});
   const [activeIndex, setActiveIndex] = useState(0);
   const [cycling, setCycling] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -38,8 +66,13 @@ export function PhotoWall() {
   const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
-    const rows = await networkUtility.getPhotosWithUrls(coupleId);
+    if (!coupleId) return;
+    const [rows, tags] = await Promise.all([
+      networkUtility.getPhotosWithUrls(coupleId),
+      networkUtility.getPhotoDateTags(coupleId),
+    ]);
     setPhotos(rows);
+    setDateTags(tags || {});
     setActiveIndex((i) => (rows.length ? Math.min(i, rows.length - 1) : 0));
   }, [coupleId]);
 
@@ -47,6 +80,8 @@ export function PhotoWall() {
     userIdField: 'uploaded_by',
     currentUserId: user?.id,
   });
+
+  useCoupleRealtime(coupleId, 'date_diary', load);
 
   // Handle local file selection and convert to temporary visual string URL
   const handleFileSelect = (e) => {
@@ -101,7 +136,7 @@ export function PhotoWall() {
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center py-8 select-none gap-6">
+    <div className="h-full min-h-0 w-full flex flex-col items-center justify-center py-0 select-none gap-2 lg:gap-4 shrink min-w-0">
       
       {/* Hidden Base Input Tracker */}
       <input 
@@ -113,7 +148,7 @@ export function PhotoWall() {
       />
 
       {/* Primary Stack Stage Container */}
-      <div className="relative w-64 h-76 min-h-[304px]">
+      <div className="relative w-[clamp(9.5rem,12vw,16rem)] aspect-[256/304] max-h-full shrink-0">
         
         {/* ====================================================================
            LAYER ONE: ACTIVE IMAGE PREVIEW / UPLOADER COMPOSER SLATE
@@ -194,6 +229,7 @@ export function PhotoWall() {
             const t = stackTransform(rawIndex, photos.length, activeIndex, cycling && rawIndex === activeIndex);
             const photo = photos[rawIndex];
             const isTopCard = rawIndex === activeIndex;
+            const dateLink = dateTags[photo.id];
 
             return (
               <div
@@ -204,6 +240,7 @@ export function PhotoWall() {
               >
                 {/* Image Frame Container Box */}
                 <div className="w-full aspect-square bg-neutral-950 rounded-sm overflow-hidden border border-black/10 relative">
+                  <DateLinkTag dateLink={dateLink} />
                   <img
                     src={photo.imageUrl}
                     alt="Memory frame"

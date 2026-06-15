@@ -14,25 +14,35 @@ export default function Home() {
       {/* Absolute overlay stack mounted safely outside content flows */}
       <StickyNotesTray />
 
-      <div className="w-full">
-        {/* Changed to flex layout with items-start to handle varying column heights */}
-        <div className="flex items-start justify-between gap-6 w-full">
+      <div className="h-full min-h-0 w-full overflow-hidden">
+        <div className="flex h-full min-h-0 items-stretch justify-between gap-3 lg:gap-5 xl:gap-6 w-full">
           
-          {/* Main Content: Takes up all remaining available workspace width dynamically */}
-          <div className="flex-1 flex flex-row max-h-[75vh] gap-8">
-            <TodoPanel />
-            <div className='w-5/6 h-auto flex flex-col justify-end gap-8 '>
-              <div className='flex flex-row gap-6 justify-between items-start'>
+          <div className="flex-1 flex flex-row min-w-0 min-h-0 h-full gap-3 lg:gap-5 xl:gap-8">
+            <div
+              className="
+                h-full max-h-full min-w-[14rem] shrink
+                w-[clamp(14rem,40%,100%)]
+                md:w-[clamp(14rem,36%,42%)]
+                lg:w-[45%] lg:max-w-[50%]
+                xl:w-[48%] xl:max-w-[50%]
+              "
+            >
+              <TodoPanel />
+            </div>
+            <div className="flex-1 min-w-0 h-full flex flex-col justify-end gap-3 lg:gap-5 xl:gap-6 min-h-0">
+              <div className="flex flex-row gap-3 lg:gap-5 xl:gap-6 justify-between items-start min-h-0 flex-1 max-h-[58%]">
                 <PhotoWall />
-                <StickyNoteComposer />
+                <div className="shrink-0 self-start">
+                  <StickyNoteComposer />
+                </div>
               </div>
-              <JamSessions />
+              <div className="shrink-0 min-h-0 max-h-[42%] overflow-hidden">
+                <JamSessions />
+              </div>
             </div>
           </div>
 
-          {/* Interactive Flip-Letter Widget Column */}
-          {/* w-auto lets it match its child's exact size, shrink-0 stops the browser from squishing it */}
-          <div className="w-auto shrink-0 pt-0 flex justify-end">
+          <div className="w-auto shrink-0 h-full min-h-0 flex items-start justify-end">
             <FlipLetter />
           </div>
 

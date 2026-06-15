@@ -20,3 +20,4 @@ alter table public.couples
 -- Realtime (if not already on)
 alter publication supabase_realtime add table public.link_drops;
 alter publication supabase_realtime add table public.photo_wall;
+alter publication supabase_realtime add table public.date_diary;

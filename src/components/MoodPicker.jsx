@@ -48,7 +48,7 @@ export function MoodPicker() {
   };
 
   return (
-    <div className="relative flex items-center justify-center w-64 h-64 select-none overflow-visible">
+    <div className="relative flex items-center justify-center w-[clamp(12rem,14vw,16rem)] h-[clamp(12rem,14vw,16rem)] select-none overflow-visible">
       
       {/* SVG Liquid Goo Engine WebGL-like Filter Core */}
       <svg className="absolute w-0 h-0" xmlns="http://www.w3.org/2000/svg" version="1.1">

@@ -4,8 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Missing Supabase environment variables. Check your .env.local file!");
+if (!supabaseUrl) {
+  console.error("Missing Supabase URL environment variable. Check your .env.local file!");
+}
+if (!supabaseAnonKey) {
+  console.error("Missing Supabase publishable key environment variable. Check your .env.local file!");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
